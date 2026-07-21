@@ -1,26 +1,63 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.cjs
+
+# Build output
+dist/
+build/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+uploads/
+tmp/
+temp/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Test and cache output
+.cache/
+.parcel-cache/
+.eslintcache
+.vitest/
+.jest/
+
+# Package manager artifacts
+.yarn/
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
+
+# OS and editor files
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
 
-.env
+# Local deployment files
+.render/
+.vercel/
+.netlify/
