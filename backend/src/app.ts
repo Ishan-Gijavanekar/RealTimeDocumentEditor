@@ -2,8 +2,10 @@ import cors from 'cors'
 import express from 'express'
 import morgan from 'morgan'
 import { env } from './config/env.js'
+import { requireAuth } from './middleware/auth.middleware.js'
 import { errorHandler } from './middleware/error-handler.js'
 import { notFoundHandler } from './middleware/not-found.js'
+import { authRouter } from './routes/auth.routes.js'
 import { healthRouter } from './routes/health.routes.js'
 import { meRouter } from './routes/me.routes.js'
 import { workspaceRouter } from './routes/workspace.routes.js'
@@ -21,6 +23,8 @@ export function createApp(collaboration: CollaborationServer) {
   app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'))
 
   app.use(healthRouter)
+  app.use('/api', authRouter)
+  app.use('/api', requireAuth)
   app.use('/api', meRouter)
   app.use('/api', workspaceRouter)
   app.use('/api', createDocumentRouter(collaboration))

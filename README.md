@@ -1,37 +1,48 @@
 # Real-Time Collaborative Document Editor
 
-A MERN TypeScript collaborative document platform inspired by Google Docs and Notion. It provides a workspace document editor with real-time collaboration, document lifecycle management, comments, share links, versions, restore flows, and search.
+A MERN TypeScript collaborative document platform inspired by Google Docs and Notion. It supports authenticated users, multiple workspaces, workspace membership, document management, rich text editing, live collaboration events, comments, share links, versions, restore flows, and search.
 
 ## Tech Stack
 
-- Frontend: React, Vite, TypeScript, Socket.IO client, Lucide icons
-- Backend: Node.js, Express, TypeScript, Socket.IO, Mongoose
+- Frontend: React, React Router, Vite, TypeScript, Socket.IO client, Lucide icons
+- Backend: Node.js, Express, TypeScript, Socket.IO, Mongoose, JWT, bcryptjs
 - Database: MongoDB
-- Package management: npm workspaces-style root scripts using `npm --prefix`
+- Package management: npm root scripts using `npm --prefix`
 
 ## Operational Capabilities
 
 The current implementation supports these end-to-end capabilities:
 
-- Workspace loading with seeded demo workspace data
-- Document and folder tree management
-- Create documents and folders
+- JWT authentication with register, login, current-user lookup, and logout on the client
+- Password hashing with bcryptjs
+- Multi-user support through MongoDB-backed user accounts
+- Multi-workspace support with workspace creation and membership-scoped access
+- Workspace member listing and owner-only member invites by email
+- Workspace-scoped document and folder trees
+- Create documents and folders inside selected workspaces
 - Rename and edit rich text document content
 - Duplicate, archive, and soft-delete documents
-- Real-time document update broadcasting through Socket.IO rooms
+- Role-aware document access using workspace membership and document permissions
+- Real-time document update broadcasting through authenticated Socket.IO rooms
 - Presence events for collaborators joining, leaving, and updating activity
 - Inline/general comment creation
 - Comment status toggling between open and resolved
 - Comment replies API support
 - Mention parsing from comment text using `@<userObjectId>` syntax
 - Share link creation with role assignment
-- Version snapshot creation
-- Restore document content from a saved version
+- Version snapshot creation and restore
 - Workspace-scoped document search
 - Offline draft preservation in browser `localStorage`
 - Centralized backend error handling with consistent JSON responses
 - Health endpoint for API and MongoDB connection state
 - Permissive CORS for local development and cross-origin API testing
+
+Seeded demo users are created when MongoDB is available:
+
+```text
+demo@example.com / Password123!
+editor@example.com / Password123!
+```
 
 ## Repository Structure
 
@@ -54,10 +65,18 @@ The current implementation supports these end-to-end capabilities:
 |   |   |   |-- env.ts            # Environment variable loading/defaults
 |   |   |-- constants/
 |   |   |   |-- roles.ts          # Document roles and capabilities
+|   |   |-- controllers/         # Request validation and business-flow handlers
+|   |   |   |-- auth.controller.ts
+|   |   |   |-- comment.controller.ts
+|   |   |   |-- document.controller.ts
+|   |   |   |-- search.controller.ts
+|   |   |   |-- version.controller.ts
+|   |   |   |-- workspace.controller.ts
 |   |   |-- middleware/
-|   |   |   |-- error-handler.ts  # Central API error formatter
-|   |   |   |-- not-found.ts      # Unknown route handler
-|   |   |   |-- request-context.ts # Demo actor extraction
+|   |   |   |-- auth.middleware.ts  # JWT bearer-token protection
+|   |   |   |-- error-handler.ts
+|   |   |   |-- not-found.ts
+|   |   |   |-- request-context.ts
 |   |   |-- models/
 |   |   |   |-- comment.model.ts
 |   |   |   |-- document.model.ts
@@ -65,7 +84,8 @@ The current implementation supports these end-to-end capabilities:
 |   |   |   |-- user.model.ts
 |   |   |   |-- version.model.ts
 |   |   |   |-- workspace.model.ts
-|   |   |-- routes/
+|   |   |-- routes/              # Thin route declarations only
+|   |   |   |-- auth.routes.ts
 |   |   |   |-- comment.routes.ts
 |   |   |   |-- document.routes.ts
 |   |   |   |-- health.routes.ts
@@ -73,18 +93,21 @@ The current implementation supports these end-to-end capabilities:
 |   |   |   |-- search.routes.ts
 |   |   |   |-- version.routes.ts
 |   |   |   |-- workspace.routes.ts
-|   |   |-- services/
+|   |   |-- services/            # Reusable domain/application services
+|   |   |   |-- auth.service.ts
 |   |   |   |-- permission.service.ts
 |   |   |   |-- seed.service.ts
 |   |   |-- sockets/
 |   |   |   |-- collaboration.socket.ts
+|   |   |-- types/
+|   |   |   |-- express.d.ts
 |   |   |-- utils/
 |   |       |-- app-error.ts
 |   |       |-- async-handler.ts
 |   |       |-- logger.ts
 |   |       |-- validation.ts
 |-- frontend/
-    |-- package.json             # Frontend dependencies and scripts
+    |-- package.json
     |-- package-lock.json
     |-- index.html
     |-- vite.config.ts
@@ -96,10 +119,27 @@ The current implementation supports these end-to-end capabilities:
     |   |-- icons.svg
     |-- src/
         |-- App.css
-        |-- App.tsx
+        |-- App.tsx              # Route shell
         |-- index.css
-        |-- main.tsx
-        |-- assets/
+        |-- main.tsx             # BrowserRouter mounting
+        |-- api/
+        |   |-- client.ts
+        |-- components/
+        |   |-- ApiError.tsx
+        |   |-- DocumentEditor.tsx
+        |   |-- EditorToolbar.tsx
+        |   |-- Inspector.tsx
+        |   |-- Topbar.tsx
+        |   |-- WorkspaceSidebar.tsx
+        |-- context/
+        |   |-- AuthContext.tsx
+        |   |-- auth-context-value.ts
+        |   |-- useAuth.ts
+        |-- pages/
+        |   |-- LoginPage.tsx
+        |   |-- WorkspacePage.tsx
+        |-- types/
+            |-- index.ts
 ```
 
 Generated folders such as `node_modules/`, `dist/`, cache folders, logs, and `.env` files are intentionally excluded from git.
@@ -110,14 +150,14 @@ Create `backend/.env` from `backend/.env.example`:
 
 ```text
 PORT=4000
-CLIENT_ORIGIN= ALLOWED DOMAINS
-MONGO_URI= Your Mongo URI
-MONGO_SERVER_SELECTION_TIMEOUT_MS= TIMEOUT PERIOD
+CLIENT_ORIGIN=http://127.0.0.1:5173
+MONGO_URI=mongodb://127.0.0.1:27017/realtime_document_editor
+MONGO_SERVER_SELECTION_TIMEOUT_MS=5000
+JWT_SECRET=replace-with-a-long-random-secret
+JWT_EXPIRES_IN=7d
 ```
 
-For MongoDB Atlas, replace `MONGO_URI` with your Atlas connection string.
-
-The frontend uses this optional variable:
+The frontend uses this optional variable in `frontend/.env`:
 
 ```text
 VITE_API_URL=http://localhost:4000
@@ -199,10 +239,21 @@ Errors use:
 
 ## Key API Groups
 
+Public endpoints:
+
 - `GET /health` - API and MongoDB connection health
-- `GET /api/me` - current demo user
-- `GET /api/workspaces` - list workspaces
+- `POST /api/auth/register` - create user and return JWT
+- `POST /api/auth/login` - authenticate and return JWT
+
+Protected endpoints require `Authorization: Bearer <token>`:
+
+- `GET /api/auth/me` - current authenticated user
+- `GET /api/me` - current authenticated user alias
+- `GET /api/workspaces` - list workspaces for the current user
+- `POST /api/workspaces` - create workspace
 - `GET /api/workspaces/:workspaceId/tree` - workspace document tree
+- `GET /api/workspaces/:workspaceId/members` - list workspace members
+- `POST /api/workspaces/:workspaceId/members` - add user to workspace by email
 - `POST /api/documents` - create document or folder
 - `GET /api/documents/:documentId` - get document metadata/content
 - `PATCH /api/documents/:documentId` - update title, content, parent, or status
@@ -216,6 +267,8 @@ Errors use:
 - `POST /api/documents/:documentId/restore` - restore version
 - `POST /api/documents/:documentId/share-links` - create share link
 - `GET /api/search` - search documents in a workspace
+
+Socket.IO collaboration also requires the JWT in the connection auth payload.
 
 ## Common Issue: Failed To Fetch
 

@@ -6,4 +6,6 @@ export const env = {
   clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://127.0.0.1:5173',
   mongoUri: process.env.MONGO_URI ?? 'mongodb://127.0.0.1:27017/realtime_document_editor',
   mongoServerSelectionTimeoutMs: Number(process.env.MONGO_SERVER_SELECTION_TIMEOUT_MS ?? 5000),
+  jwtSecret: process.env.JWT_SECRET ?? 'development-only-change-me',
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
 }

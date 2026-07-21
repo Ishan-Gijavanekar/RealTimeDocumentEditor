@@ -1,3 +1,11 @@
+.auth-page { min-height: 100svh; display: grid; place-items: center; padding: 24px; background: var(--bg); }
+.auth-panel { width: min(440px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); padding: 22px; display: flex; flex-direction: column; gap: 16px; }
+.auth-form { display: flex; flex-direction: column; gap: 12px; }
+.auth-form label { display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 14px; }
+.auth-form input, .workspace-select { height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--ink); }
+.auth-error { margin: 0; padding: 10px; border: 1px solid #f2b5b3; background: #fff1f1; color: #8c2522; border-radius: 7px; }
+.auth-hint { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.workspace-select { width: 100%; }
 :root {
   --bg: #f7f8fb;
   --panel: #ffffff;
