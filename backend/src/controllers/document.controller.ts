@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+﻿import { randomUUID } from 'node:crypto'
 import type { Request, Response } from 'express'
 import { z } from 'zod'
 import { getActor } from '../middleware/request-context.js'
@@ -51,6 +51,12 @@ export function createDocumentController(collaboration: CollaborationServer) {
       if (!document) throw new AppError(404, 'DOCUMENT_NOT_FOUND', 'Document not found')
       await assertDocumentAccess(document, actor.id, 'edit')
       const updated = await Document.findByIdAndUpdate(documentId, { ...body, $inc: { updateCount: body.contentHtml ? 1 : 0 } }, { new: true })
+
+      if (body.status === 'deleted' && document.type === 'folder') {
+        const descendants = await collectDescendantDocumentIds(document._id.toString())
+        if (descendants.length > 0) await Document.updateMany({ _id: { $in: descendants } }, { status: 'deleted' })
+      }
+
       collaboration.emitDocumentPatched(documentId, updated, actor.id)
       res.json({ success: true, data: { document: updated } })
     },
@@ -89,4 +95,11 @@ export function createDocumentController(collaboration: CollaborationServer) {
       res.status(201).json({ success: true, data: { shareLink } })
     },
   }
+}
+
+async function collectDescendantDocumentIds(parentId: string): Promise<string[]> {
+  const children = await Document.find({ parentId, status: { $ne: 'deleted' } }).select('_id type')
+  const childIds = children.map((child) => child._id.toString())
+  const nestedIds = await Promise.all(children.filter((child) => child.type === 'folder').map((child) => collectDescendantDocumentIds(child._id.toString())))
+  return [...childIds, ...nestedIds.flat()]
 }

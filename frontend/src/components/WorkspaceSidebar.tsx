@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Edit3, FilePlus2, FileText, Folder, FolderOpen, FolderPlus, LogOut, Plus, Search, Trash2 } from 'lucide-react'
+﻿import { ChevronDown, ChevronRight, Edit3, FilePlus2, FileText, Folder, FolderOpen, FolderPlus, LogOut, Plus, Search, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { DocumentNode, User, Workspace } from '../types'
 
@@ -15,6 +15,7 @@ type Props = {
   onEditWorkspace: () => void
   onDeleteWorkspace: () => void
   onCreateNode: (type: 'document' | 'folder', parentId?: string | null) => void
+  onDeleteNode: (node: DocumentNode) => void
   onSelectDocument: (documentId: string) => void
   onLogout: () => void
 }
@@ -69,14 +70,20 @@ export function WorkspaceSidebar(props: Props) {
         <div className="tree-row folder-row" style={{ paddingLeft }}>
           <button className="tree-icon-button" title={isOpen ? 'Collapse folder' : 'Expand folder'} onClick={() => toggleFolder(node._id)}>{hasChildren ? isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} /> : <span className="tree-spacer" />}</button>
           <button className="tree-label folder-label" onClick={() => toggleFolder(node._id)}>{isOpen ? <FolderOpen size={16} /> : <Folder size={16} />}<span>{node.title}</span></button>
-          <button className="tree-action" title="New document in folder" onClick={() => props.onCreateNode('document', node._id)}><FilePlus2 size={14} /></button>
-          <button className="tree-action" title="New folder inside folder" onClick={() => props.onCreateNode('folder', node._id)}><FolderPlus size={14} /></button>
+          <div className="tree-actions">
+            <button className="tree-action" title="New document in folder" onClick={() => props.onCreateNode('document', node._id)}><FilePlus2 size={14} /></button>
+            <button className="tree-action" title="New folder inside folder" onClick={() => props.onCreateNode('folder', node._id)}><FolderPlus size={14} /></button>
+            <button className="tree-action danger-action" title="Delete folder" onClick={() => props.onDeleteNode(node)}><Trash2 size={14} /></button>
+          </div>
         </div>
         {isOpen && node.children.map((child) => renderNode(child, depth + 1))}
       </div>
     }
 
-    return <button key={node._id} className={node._id === props.activeDocumentId ? 'tree-row file-row active' : 'tree-row file-row'} style={{ paddingLeft }} onClick={() => props.onSelectDocument(node._id)}><span className="tree-indent-spacer" /><FileText size={15} /><span>{node.title}</span></button>
+    return <div key={node._id} className={node._id === props.activeDocumentId ? 'tree-row file-row active' : 'tree-row file-row'} style={{ paddingLeft }}>
+      <button className="tree-label file-label" onClick={() => props.onSelectDocument(node._id)}><span className="tree-indent-spacer" /><FileText size={15} /><span>{node.title}</span></button>
+      <button className="tree-action danger-action" title="Delete document" onClick={() => props.onDeleteNode(node)}><Trash2 size={14} /></button>
+    </div>
   }
 
   return <aside className="sidebar">

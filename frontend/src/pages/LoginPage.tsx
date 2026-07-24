@@ -1,13 +1,13 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 
 export function LoginPage() {
   const { user, login, register } = useAuth()
   const [mode, setMode] = useState<'login' | 'register'>('login')
-  const [email, setEmail] = useState('demo@example.com')
-  const [password, setPassword] = useState('Password123!')
-  const [displayName, setDisplayName] = useState('Demo Collaborator')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState('')
 
   if (user) return <Navigate to="/workspaces" replace />
@@ -32,12 +32,11 @@ export function LoginPage() {
       </div>
       {error && <p className="auth-error">{error}</p>}
       <form onSubmit={(event) => void submit(event)} className="auth-form">
-        {mode === 'register' && <label>Display name<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></label>}
-        <label>Email<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" /></label>
-        <label>Password<input value={password} onChange={(event) => setPassword(event.target.value)} type="password" /></label>
+        {mode === 'register' && <label>Display name<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="Your name" /></label>}
+        <label>Email<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="you@example.com" /></label>
+        <label>Password<input value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="Enter password" /></label>
         <button className="primary" type="submit">{mode === 'login' ? 'Login' : 'Create account'}</button>
       </form>
-      <p className="auth-hint">Seed users: demo@example.com or editor@example.com with password Password123!</p>
     </section>
   </main>
 }
