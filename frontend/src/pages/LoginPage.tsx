@@ -1,16 +1,19 @@
-﻿import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { useState } from 'react'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 
 export function LoginPage() {
   const { user, login, register } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const returnTo = new URLSearchParams(location.search).get('returnTo') || '/workspaces'
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState('')
 
-  if (user) return <Navigate to="/workspaces" replace />
+  if (user) return <Navigate to={returnTo} replace />
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -18,6 +21,7 @@ export function LoginPage() {
     try {
       if (mode === 'login') await login({ email, password })
       else await register({ email, password, displayName })
+      navigate(returnTo, { replace: true })
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Authentication failed')
     }
@@ -40,3 +44,4 @@ export function LoginPage() {
     </section>
   </main>
 }
+

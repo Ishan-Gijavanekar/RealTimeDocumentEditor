@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express'
 import { z } from 'zod'
 import { getActor } from '../middleware/request-context.js'
-import { Document } from '../models/document.model.js'
+import { Document, type DocumentDocument } from '../models/document.model.js'
 import { User } from '../models/user.model.js'
 import { Workspace } from '../models/workspace.model.js'
 import { assertWorkspaceMember, assertWorkspaceOwner } from '../services/permission.service.js'
@@ -10,7 +10,17 @@ import { objectId } from '../utils/validation.js'
 
 export async function listWorkspaces(req: Request, res: Response) {
   const actor = getActor(req)
-  const workspaces = await Workspace.find({ 'members.userId': actor.id }).sort({ updatedAt: -1 })
+  const memberWorkspaces = await Workspace.find({ 'members.userId': actor.id }).sort({ updatedAt: -1 })
+  const memberWorkspaceIds = new Set(memberWorkspaces.map((workspace) => workspace._id.toString()))
+  const sharedWorkspaceIds = await Document.distinct('workspaceId', {
+    'permissions.subjectId': actor.id,
+    status: { $ne: 'deleted' },
+    workspaceId: { $nin: [...memberWorkspaceIds] },
+  })
+  const sharedWorkspaces = sharedWorkspaceIds.length
+    ? await Workspace.find({ _id: { $in: sharedWorkspaceIds } }).sort({ updatedAt: -1 })
+    : []
+  const workspaces = [...memberWorkspaces, ...sharedWorkspaces]
   res.json({ success: true, data: { workspaces } })
 }
 
@@ -31,9 +41,49 @@ export async function createWorkspace(req: Request, res: Response) {
 export async function getWorkspaceTree(req: Request, res: Response) {
   const actor = getActor(req)
   const workspaceId = objectId.parse(req.params.workspaceId)
-  await assertWorkspaceMember(workspaceId, actor.id)
-  const documents = await Document.find({ workspaceId, status: { $ne: 'deleted' } }).sort({ type: 1, updatedAt: -1 })
+  const workspace = await Workspace.findById(workspaceId)
+  if (!workspace) throw new AppError(404, 'WORKSPACE_NOT_FOUND', 'Workspace not found')
+
+  const isMember = workspace.members.some((member) => member.userId.toString() === actor.id)
+  const documents = isMember
+    ? await Document.find({ workspaceId, status: { $ne: 'deleted' } }).sort({ type: 1, updatedAt: -1 })
+    : await getSharedDocumentTree(workspaceId, actor.id)
+
+  if (!isMember && documents.length === 0) {
+    throw new AppError(403, 'WORKSPACE_ACCESS_DENIED', 'You do not have access to this workspace')
+  }
+
   res.json({ success: true, data: { documents } })
+}
+
+async function getSharedDocumentTree(workspaceId: string, userId: string) {
+  const included = new Map<string, DocumentDocument>()
+  const directDocuments = await Document.find({
+    workspaceId,
+    status: { $ne: 'deleted' },
+    'permissions.subjectId': userId,
+  }).sort({ type: 1, updatedAt: -1 })
+
+  directDocuments.forEach((document) => included.set(document._id.toString(), document))
+  let parentIds = directDocuments
+    .map((document) => document.parentId?.toString())
+    .filter((parentId): parentId is string => Boolean(parentId))
+
+  while (parentIds.length) {
+    const missingParentIds = [...new Set(parentIds.filter((parentId) => !included.has(parentId)))]
+    if (!missingParentIds.length) break
+    const parents = await Document.find({ _id: { $in: missingParentIds }, workspaceId, status: { $ne: 'deleted' } })
+    parentIds = []
+    parents.forEach((parent) => {
+      included.set(parent._id.toString(), parent)
+      if (parent.parentId) parentIds.push(parent.parentId.toString())
+    })
+  }
+
+  return [...included.values()].sort((a, b) => {
+    if (a.type !== b.type) return a.type === 'folder' ? -1 : 1
+    return a.title.localeCompare(b.title)
+  })
 }
 
 export async function listWorkspaceMembers(req: Request, res: Response) {
@@ -60,6 +110,7 @@ export async function addWorkspaceMember(req: Request, res: Response) {
 
   res.json({ success: true, data: { workspace } })
 }
+
 export async function updateWorkspace(req: Request, res: Response) {
   const actor = getActor(req)
   const workspaceId = objectId.parse(req.params.workspaceId)

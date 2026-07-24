@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { io, type Socket } from 'socket.io-client'
 import { apiRequest, getApiUrl } from '../api/client'
 import { ApiError } from '../components/ApiError'
@@ -24,9 +24,11 @@ type NodeDialogState = { open: boolean; type: 'document' | 'folder'; parentId?: 
 
 export function WorkspacePage() {
   const { user, token, logout, loading } = useAuth()
+  const [searchParams] = useSearchParams()
   const { enqueueSnackbar } = useSnackbar()
   const editorRef = useRef<HTMLDivElement | null>(null)
   const socketRef = useRef<Socket | null>(null)
+  const requestedSelectionRef = useRef({ workspaceId: searchParams.get('workspaceId'), documentId: searchParams.get('documentId') })
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [documents, setDocuments] = useState<DocumentNode[]>([])
   const [activeWorkspaceId, setActiveWorkspaceId] = useState('')
@@ -64,7 +66,14 @@ export function WorkspacePage() {
   const loadTree = useCallback(async (workspaceId: string) => {
     const { documents } = await apiRequest<{ documents: DocumentNode[] }>(`/api/workspaces/${workspaceId}/tree`)
     setDocuments(documents)
-    setActiveDocumentId((current) => documents.some((document) => document._id === current) ? current : documents.find((document) => document.type === 'document')?._id || '')
+    setActiveDocumentId((current) => {
+      const requestedDocumentId = requestedSelectionRef.current.documentId
+      if (requestedDocumentId && documents.some((document) => document._id === requestedDocumentId)) {
+        requestedSelectionRef.current.documentId = null
+        return requestedDocumentId
+      }
+      return documents.some((document) => document._id === current) ? current : documents.find((document) => document.type === 'document')?._id || ''
+    })
   }, [])
 
   const loadDocument = useCallback(async (documentId: string) => {
@@ -89,7 +98,9 @@ export function WorkspacePage() {
       void runAction(async () => {
         const { workspaces } = await apiRequest<{ workspaces: Workspace[] }>('/api/workspaces')
         setWorkspaces(workspaces)
-        const first = workspaces[0]?._id || ''
+        const requestedWorkspaceId = requestedSelectionRef.current.workspaceId
+        const first = workspaces.find((workspace) => workspace._id === requestedWorkspaceId)?._id || workspaces[0]?._id || ''
+        requestedSelectionRef.current.workspaceId = null
         setActiveWorkspaceId(first)
         if (first) await loadTree(first)
       })
@@ -240,3 +251,4 @@ export function WorkspacePage() {
     <DeleteNodeDialog open={Boolean(deleteNode)} node={deleteNode} onClose={() => setDeleteNode(undefined)} onConfirm={() => void deleteSelectedNode()} />
   </main>
 }
+

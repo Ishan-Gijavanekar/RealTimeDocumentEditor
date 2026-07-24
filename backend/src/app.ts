@@ -13,6 +13,7 @@ import { createDocumentRouter } from './routes/document.routes.js'
 import { createCommentRouter } from './routes/comment.routes.js'
 import { createVersionRouter } from './routes/version.routes.js'
 import { searchRouter } from './routes/search.routes.js'
+import { shareRouter } from './routes/share.routes.js'
 import type { CollaborationServer } from './sockets/collaboration.socket.js'
 
 export function createApp(collaboration: CollaborationServer) {
@@ -24,6 +25,7 @@ export function createApp(collaboration: CollaborationServer) {
 
   app.use(healthRouter)
   app.use('/api', authRouter)
+  app.use('/api', shareRouter)
   app.use('/api', requireAuth)
   app.use('/api', meRouter)
   app.use('/api', workspaceRouter)
