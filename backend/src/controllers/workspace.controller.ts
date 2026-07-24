@@ -60,3 +60,22 @@ export async function addWorkspaceMember(req: Request, res: Response) {
 
   res.json({ success: true, data: { workspace } })
 }
+export async function updateWorkspace(req: Request, res: Response) {
+  const actor = getActor(req)
+  const workspaceId = objectId.parse(req.params.workspaceId)
+  const body = z.object({ name: z.string().trim().min(2).max(120) }).parse(req.body)
+  const workspace = await assertWorkspaceOwner(workspaceId, actor.id)
+  workspace.name = body.name
+  workspace.slug = `${body.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'workspace'}-${workspace._id.toString().slice(-6)}`
+  await workspace.save()
+  res.json({ success: true, data: { workspace } })
+}
+
+export async function deleteWorkspace(req: Request, res: Response) {
+  const actor = getActor(req)
+  const workspaceId = objectId.parse(req.params.workspaceId)
+  const workspace = await assertWorkspaceOwner(workspaceId, actor.id)
+  await Document.updateMany({ workspaceId: workspace._id }, { status: 'deleted' })
+  await Workspace.deleteOne({ _id: workspace._id })
+  res.json({ success: true, data: { deletedWorkspaceId: workspaceId } })
+}
