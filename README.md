@@ -151,7 +151,7 @@ Create `backend/.env` from `backend/.env.example`:
 ```text
 PORT=4000
 CLIENT_ORIGIN=http://127.0.0.1:5173
-MONGO_URI=mongodb://127.0.0.1:27017/realtime_document_editor
+MONGO_URI=your-mongo-uri
 MONGO_SERVER_SELECTION_TIMEOUT_MS=5000
 JWT_SECRET=replace-with-a-long-random-secret
 JWT_EXPIRES_IN=7d
